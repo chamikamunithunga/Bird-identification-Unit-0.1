@@ -1,0 +1,137 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+#from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Rescaling
+path = '../input/100-bird-species'
+def get_file_number(folder):
+ return sum([len(files) for _, _, files in os.walk(folder)])
+print(get_file_number(os.path.join(path, 'train')))
+print(get_file_number(os.path.join(path, 'valid')))
+print(get_file_number(os.path.join(path, 'test')))
+train_dir = '../input/100-bird-species/train'
+valid_dir = '../input/100-bird-species/valid'
+test_dir = '../input/100-bird-species/test'
+batch_size = 32
+# instead of using ImageDataGenerator - image_dataset_from_directory() generates a
+# tf.data.Dataset (usually faster than the ImageDataGenerator) from image files in a directory
+# image_size must be provided, here: reducing intital size of (224, 224) to (128, 128)
+train_dataset = tf.keras.utils.image_dataset_from_directory(train_dir, label_mode='categorical',
+image_size=(128, 128), batch_size=batch_size)
+valid_dataset = tf.keras.utils.image_dataset_from_directory(valid_dir, label_mode='categorical',
+image_size=(128, 128), batch_size=batch_size)
+test_dataset = tf.keras.utils.image_dataset_from_directory(test_dir, label_mode='categorical',
+image_size=(128, 128), batch_size=batch_size)
+label_names = train_dataset.class_names
+print(label_names)
+plt.figure(figsize=(25, 20))
+for images, labels in train_dataset.take(1):
+ for i in range(6):
+  ax = plt.subplot(1, 6, i+1)
+  plt.imshow(images[i].numpy().astype('int'))
+  plt.title(train_dataset.class_names[tf.argmax(labels[i])]) # this works to display the labels according to the images
+  #plt.title(label_name[labels[i]]) doesnt work
+  plt.grid()
+  plt.axis('on')
+
+for image_batch, labels_batch in train_dataset:
+ print(image_batch.shape)
+ print(labels_batch.shape)
+ break
+# normalize the dataset to get (input) values between 0-1
+def normalize_data(dataset):
+ # To rescale an input in the [0, 255] range to be in the [0, 1] range, you would pass scale=1./255.
+ normalization_layer = Rescaling(1./255)
+ normalized_dataset = dataset.map(lambda x, y: (normalization_layer(x), y))
+
+ return normalized_dataset
+# normalize every dataset
+normalized_training_data = normalize_data(train_dataset)
+normalized_validation_data = normalize_data(valid_dataset)
+normalized_testing_data = normalize_data(test_dataset)
+# testing out the noramlization results
+image_batch, labels_batch = next(iter(normalized_training_data))
+first_image = image_batch[0]
+print(np.min(first_image), np.max(first_image)) # print scaled(!) minimum value (0-1)
+
+
+AUTOTUNE = tf.data.AUTOTUNE
+normalized_training_data = normalized_training_data.cache().prefetch(buffer_size=AUTOTUNE)
+normalized_validation_data = normalized_validation_data.cache().prefetch(buffer_size=AUTOTUNE)
+normalized_testing_data = normalized_testing_data.cache().prefetch(buffer_size=AUTOTUNE)
+
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(
+    normalized_training_data,
+    validation_data=normalized_validation_data,
+    epochs=10
+)
+
+plt.figure(figsize=(10,8))
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label='val_accuracy')
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(len(label_names), activation='softmax')
+])
+for image, label in normalized_testing_data.take(1):
+ model_prediction = model.predict(image)
+ for i in range(6):
+    plt.subplot(1, 6, i+1)
+    plt.imshow(image[i].numpy().astype("float")) # dtype should be float after normalization!
+    plt.title(f"Prediction: {test_labels[tf.argmax(tf.round(model_prediction[i]))]}"+
+              f"\nOriginal Labels: {test_labels[tf.argmax(label[i])]}")
+    plt.grid(True)
+    plt.axis("on")
+ plt.show()
+# loading the already built model (efficientNetB3 that is stored inside the folder) - get some pretty
+# good score :)
+plt.plot(history.history['loss'], label='loss')
+plt.plot(history.history['val_loss'], label='val_loss')
+plt.legend(['loss', 'val_loss'])
+plt.grid()
+plt.xlabel('Epochs')
+plt.title('1st Model Loss')
+model.evaluate(test_dataset, verbose=1)
+test_labels = test_dataset.class_names
+plt.figure(figsize=(25, 20))
+for image, label in normalized_testing_data.take(1):
+ model_prediction = model.predict(image)
+for image, label in normalized_testing_data.take(1):
+ new_model_prediction = new_model.predict(image)
+ for i in range(6):
+    plt.subplot(1, 6, i+1)
+    plt.imshow(image[i].numpy().astype("float")) # dtype should be float after normalization!
+    plt.title(f"Prediction: {test_labels[tf.argmax(tf.round(new_model_prediction[i]))]}" + 
+              f"\nOriginal Labels: {test_labels[tf.argmax(label[i])]}")
+    plt.grid(True)
+    plt.axis("on")
+ plt.show():D
+new_model = tf.keras.models.load_model('../input/100-bird-species/EfficientNetB3-birds-98.92.h5')
+
+
+
+
+
+new_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+new_model.fit(normalized_training_data, epochs=5, validation_data=normalized_validation_data)
+new_model_evaluation = new_model.evaluate(normalized_testing_data, verbose=1)
+test_labels = test_dataset.class_names
+plt.figure(figsize=(25, 20))
+for image, label in normalized_testing_data.take(1):
+ new_model_prediction = new_model.predict(image)
+ for i in range(6):
+ plt.subplot(1, 6, i+1)
+ plt.imshow(image[i].numpy().astype("float")) # dtype should be float after normalization!
+ plt.title(f"Prediction: {test_labels[tf.argmax(tf.round(new_model_prediction[i]))]}\n Original
+Labels : {test_labels[tf.argmax(label[i])]}")
+ plt.grid(True)
+ plt.axis("on")
+ plt.show()
